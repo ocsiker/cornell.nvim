@@ -1,0 +1,6 @@
+*.swp
+*.swo
+*.tmp
+.DS_Store
+luacov.stats.out
+luacov.report.out

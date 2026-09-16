@@ -1,0 +1,60 @@
+*cornell.nvim*                                                   Cornell Notes
+
+CONTENTS                                                        *cornell-contents*
+
+1. Introduction ............................................... |cornell-intro|
+2. Commands ................................................... |cornell-commands|
+3. Mappings ................................................... |cornell-mappings|
+4. Format ..................................................... |cornell-format|
+5. Configuration .............................................. |cornell-config|
+
+1. Introduction                                                *cornell-intro*
+
+cornell.nvim provides a Cornell Notes editing workflow for Markdown files.
+
+2. Commands                                                    *cornell-commands*
+
+:Cornell                 Toggle Cornell mode.
+:CornellOpen             Open Cornell mode.
+:CornellClose            Close Cornell mode.
+:CornellReview           Toggle review mode.
+:CornellCheck            Check cue/note QIDs.
+:CornellSummary          Toggle the Summary pane.
+
+3. Mappings                                                    *cornell-mappings*
+
+<leader>cv               Toggle Cornell.
+<leader>cq               Add a question.
+<leader>ca               Open the answer.
+<leader>cr               Review.
+<leader>cs               Toggle Summary.
+<leader>cc               Focus Cues.
+<leader>cn               Focus Notes.
+<CR>                     Jump between Cue and Note.
+<C-s>                    Save.
+q                        Close.
+
+4. Format                                                      *cornell-format*
+
+The source Markdown document uses:
+
+## Cues
+## Notes
+## Summary
+
+Cue lines use - [Q1] Question text.
+Note blocks use ### [Q1] Question text.
+
+## Questions is accepted as an alias for ## Cues.
+
+5. Configuration                                                *cornell-config*
+
+Default values:
+
+cues_width = 32
+summary_height = 8
+content_padding = 4
+qid_prefix = "Q"
+
+==============================================================================
+vim:tw=78:ts=8:ft=help:norl:
