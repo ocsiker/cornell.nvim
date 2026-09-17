@@ -13,28 +13,36 @@ local function valid_win(win)
 	return win and api.nvim_win_is_valid(win)
 end
 
-local function map(buf, mode, lhs, rhs, desc, opts)
-	if not valid_buf(buf) or not lhs or lhs == "" then
+local function keymaps()
+	return config.options.keymaps or {}
+end
+
+local function map(buf, mode, lhs, rhs, desc)
+	if not valid_buf(buf) then
 		return
 	end
 
-	opts = vim.tbl_extend("force", {
+	if not lhs or lhs == "" then
+		return
+	end
+
+	vim.keymap.set(mode, lhs, rhs, {
 		buffer = buf,
 		silent = true,
 		noremap = true,
+		nowait = true,
 		desc = desc,
-	}, opts or {})
-
-	vim.keymap.set(mode, lhs, rhs, opts)
+	})
 end
 
 local function focus(win)
-	if valid_win(win) then
-		api.nvim_set_current_win(win)
-		return true
+	if not valid_win(win) then
+		return false
 	end
 
-	return false
+	api.nvim_set_current_win(win)
+
+	return true
 end
 
 local function focus_cues()
@@ -50,28 +58,18 @@ local function focus_summary()
 end
 
 local function jump_to_note()
-	if not valid_buf(state.cues_buf) then
-		return
-	end
+	local cornell = require("cornell")
 
-	local sync = require("cornell.sync")
-	local qid = sync.current_qid(state.cues_buf)
-
-	if qid then
-		sync.jump_to_note(qid)
+	if cornell.jump_to_note then
+		cornell.jump_to_note()
 	end
 end
 
 local function jump_to_cue()
-	if not valid_buf(state.notes_buf) then
-		return
-	end
+	local cornell = require("cornell")
 
-	local sync = require("cornell.sync")
-	local qid = sync.current_qid(state.notes_buf)
-
-	if qid then
-		sync.jump_to_cue(qid)
+	if cornell.jump_to_cue then
+		cornell.jump_to_cue()
 	end
 end
 
@@ -80,19 +78,42 @@ local function common(buf, cornell)
 		return
 	end
 
-	map(buf, "n", config.options.keymaps.toggle, cornell.toggle, "Cornell: Toggle")
+	local km = keymaps()
 
-	map(buf, "n", config.options.keymaps.review, cornell.review, "Cornell: Review")
+	---------------------------------------------------------------------------
+	-- Cornell toggle
+	---------------------------------------------------------------------------
 
-	map(buf, "n", config.options.keymaps.summary, cornell.summary, "Cornell: Summary")
+	map(buf, "n", km.toggle or "<leader>cv", cornell.toggle, "Cornell: Toggle")
 
-	map(buf, "n", config.options.keymaps.save, cornell.save, "Cornell: Save")
+	---------------------------------------------------------------------------
+	-- Review
+	---------------------------------------------------------------------------
 
-	map(buf, "n", config.options.keymaps.close, cornell.close, "Cornell: Close")
+	map(buf, "n", km.review or "<leader>cr", cornell.review, "Cornell: Review")
+
+	---------------------------------------------------------------------------
+	-- Summary
+	---------------------------------------------------------------------------
+
+	map(buf, "n", km.summary or "<leader>cs", cornell.summary, "Cornell: Summary")
+
+	---------------------------------------------------------------------------
+	-- Save
+	---------------------------------------------------------------------------
+
+	map(buf, "n", km.save or "<C-s>", cornell.save, "Cornell: Save")
+
+	---------------------------------------------------------------------------
+	-- Close
+	---------------------------------------------------------------------------
+
+	map(buf, "n", km.close or "q", cornell.close, "Cornell: Close")
 end
 
 function M.setup()
 	local cornell = require("cornell")
+	local km = keymaps()
 
 	---------------------------------------------------------------------------
 	-- CUES
@@ -101,20 +122,40 @@ function M.setup()
 	if valid_buf(state.cues_buf) then
 		common(state.cues_buf, cornell)
 
-		-- IMPORTANT:
-		-- These are intentionally buffer-local and intentionally override
-		-- existing mappings while Cornell View is active.
-		map(state.cues_buf, "n", "<C-l>", focus_notes, "Cornell: Cues -> Notes", { nowait = true })
+		-------------------------------------------------------------------------
+		-- Cues -> Notes
+		--
+		-- This is deliberately NOT implemented using <C-w>l.
+		-- We know exactly which window is Cornell Notes.
+		-------------------------------------------------------------------------
 
-		map(state.cues_buf, "n", "<CR>", jump_to_note, "Cornell: Jump to note")
+		map(state.cues_buf, "n", "<C-l>", focus_notes, "Cornell: Cues -> Notes")
 
-		map(state.cues_buf, "n", config.options.keymaps.answer, cornell.open_answer, "Cornell: Open answer")
+		-------------------------------------------------------------------------
+		-- Jump from cue to corresponding note.
+		-------------------------------------------------------------------------
 
-		map(state.cues_buf, "n", config.options.keymaps.add_question, cornell.add_question, "Cornell: Add question")
+		map(state.cues_buf, "n", km.jump or "<CR>", jump_to_note, "Cornell: Jump to note")
 
-		map(state.cues_buf, "n", config.options.keymaps.cues, focus_cues, "Cornell: Cues")
+		-------------------------------------------------------------------------
+		-- Open answer.
+		-------------------------------------------------------------------------
 
-		map(state.cues_buf, "n", config.options.keymaps.notes, focus_notes, "Cornell: Notes")
+		map(state.cues_buf, "n", km.answer or "<leader>ca", cornell.open_answer, "Cornell: Open answer")
+
+		-------------------------------------------------------------------------
+		-- Add question.
+		-------------------------------------------------------------------------
+
+		map(state.cues_buf, "n", km.add_question or "<leader>cq", cornell.add_question, "Cornell: Add question")
+
+		-------------------------------------------------------------------------
+		-- Explicit focus mappings.
+		-------------------------------------------------------------------------
+
+		map(state.cues_buf, "n", km.cues or "<leader>cc", focus_cues, "Cornell: Cues")
+
+		map(state.cues_buf, "n", km.notes or "<leader>cn", focus_notes, "Cornell: Notes")
 	end
 
 	---------------------------------------------------------------------------
@@ -124,15 +165,25 @@ function M.setup()
 	if valid_buf(state.notes_buf) then
 		common(state.notes_buf, cornell)
 
-		-- IMPORTANT:
-		-- Notes -> Cues must always work inside Cornell View.
-		map(state.notes_buf, "n", "<C-h>", focus_cues, "Cornell: Notes -> Cues", { nowait = true })
+		-------------------------------------------------------------------------
+		-- Notes -> Cues
+		-------------------------------------------------------------------------
 
-		map(state.notes_buf, "n", "<CR>", jump_to_cue, "Cornell: Jump to cue")
+		map(state.notes_buf, "n", "<C-h>", focus_cues, "Cornell: Notes -> Cues")
 
-		map(state.notes_buf, "n", config.options.keymaps.cues, focus_cues, "Cornell: Cues")
+		-------------------------------------------------------------------------
+		-- Jump from note to corresponding cue.
+		-------------------------------------------------------------------------
 
-		map(state.notes_buf, "n", config.options.keymaps.notes, focus_notes, "Cornell: Notes")
+		map(state.notes_buf, "n", km.jump or "<CR>", jump_to_cue, "Cornell: Jump to cue")
+
+		-------------------------------------------------------------------------
+		-- Explicit focus mappings.
+		-------------------------------------------------------------------------
+
+		map(state.notes_buf, "n", km.cues or "<leader>cc", focus_cues, "Cornell: Cues")
+
+		map(state.notes_buf, "n", km.notes or "<leader>cn", focus_notes, "Cornell: Notes")
 	end
 
 	---------------------------------------------------------------------------
@@ -142,32 +193,32 @@ function M.setup()
 	if valid_buf(state.summary_buf) then
 		common(state.summary_buf, cornell)
 
-		map(state.summary_buf, "n", "<C-h>", focus_cues, "Cornell: Summary -> Cues", { nowait = true })
+		map(state.summary_buf, "n", "<C-h>", focus_cues, "Cornell: Summary -> Cues")
 
-		map(state.summary_buf, "n", "<C-l>", focus_notes, "Cornell: Summary -> Notes", { nowait = true })
+		map(state.summary_buf, "n", "<C-l>", focus_notes, "Cornell: Summary -> Notes")
 
-		map(state.summary_buf, "n", config.options.keymaps.cues, focus_cues, "Cornell: Cues")
+		map(state.summary_buf, "n", km.cues or "<leader>cc", focus_cues, "Cornell: Cues")
 
-		map(state.summary_buf, "n", config.options.keymaps.notes, focus_notes, "Cornell: Notes")
+		map(state.summary_buf, "n", km.notes or "<leader>cn", focus_notes, "Cornell: Notes")
 	end
 
 	---------------------------------------------------------------------------
 	-- REVIEW
 	--
-	-- Review buffer replaces Notes buffer inside notes_win.
-	-- Therefore <C-h> must also be installed here.
+	-- Review replaces the Notes buffer inside notes_win.
+	-- Therefore navigation must also exist here.
 	---------------------------------------------------------------------------
 
 	if valid_buf(state.review_buf) then
 		common(state.review_buf, cornell)
 
-		map(state.review_buf, "n", "<C-h>", focus_cues, "Cornell: Review -> Cues", { nowait = true })
+		map(state.review_buf, "n", "<C-h>", focus_cues, "Cornell: Review -> Cues")
 
-		map(state.review_buf, "n", "<C-l>", focus_notes, "Cornell: Review -> Notes", { nowait = true })
+		map(state.review_buf, "n", "<C-l>", focus_notes, "Cornell: Review -> Notes")
 
-		map(state.review_buf, "n", config.options.keymaps.cues, focus_cues, "Cornell: Cues")
+		map(state.review_buf, "n", km.cues or "<leader>cc", focus_cues, "Cornell: Cues")
 
-		map(state.review_buf, "n", config.options.keymaps.notes, focus_notes, "Cornell: Notes")
+		map(state.review_buf, "n", km.notes or "<leader>cn", focus_notes, "Cornell: Notes")
 	end
 end
 
