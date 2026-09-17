@@ -1,60 +1,88 @@
-*cornell.nvim*                                                   Cornell Notes
+*cornell.nvim*  Cornell Notes for Neovim
 
+===============================================================================
 CONTENTS                                                        *cornell-contents*
 
-1. Introduction ............................................... |cornell-intro|
-2. Commands ................................................... |cornell-commands|
-3. Mappings ................................................... |cornell-mappings|
-4. Format ..................................................... |cornell-format|
-5. Configuration .............................................. |cornell-config|
+1. Introduction ............................................... *cornell*
+2. Commands .................................................... *cornell-commands*
+3. Mappings .................................................... *cornell-mappings*
+4. Configuration ............................................... *cornell-config*
 
-1. Introduction                                                *cornell-intro*
+===============================================================================
+1. INTRODUCTION                                                  *cornell-intro*
 
-cornell.nvim provides a Cornell Notes editing workflow for Markdown files.
+cornell.nvim provides a Cornell Notes editing layout for Markdown buffers.
 
-2. Commands                                                    *cornell-commands*
+The source Markdown remains the authoritative document. Cornell buffers are
+scratch buffers and are written back to the source when content changes or
+when the document is saved.
 
-:Cornell                 Toggle Cornell mode.
-:CornellOpen             Open Cornell mode.
-:CornellClose            Close Cornell mode.
-:CornellReview           Toggle review mode.
-:CornellCheck            Check cue/note QIDs.
-:CornellSummary          Toggle the Summary pane.
+===============================================================================
+2. COMMANDS                                                      *cornell-commands*
 
-3. Mappings                                                    *cornell-mappings*
+:Cornell
+    Toggle Cornell View.
 
-<leader>cv               Toggle Cornell.
-<leader>cq               Add a question.
-<leader>ca               Open the answer.
-<leader>cr               Review.
-<leader>cs               Toggle Summary.
-<leader>cc               Focus Cues.
-<leader>cn               Focus Notes.
-<CR>                     Jump between Cue and Note.
-<C-s>                    Save.
-q                        Close.
+:CornellOpen
+    Open Cornell View.
 
-4. Format                                                      *cornell-format*
+:CornellClose
+    Close Cornell View.
 
-The source Markdown document uses:
+:CornellReview
+    Toggle Review mode.
 
-## Cues
-## Notes
-## Summary
+:CornellCheck
+    Check Cue/Note QID consistency.
 
-Cue lines use - [Q1] Question text.
-Note blocks use ### [Q1] Question text.
+:CornellSummary
+    Toggle Summary panel.
 
-## Questions is accepted as an alias for ## Cues.
+===============================================================================
+3. MAPPINGS                                                      *cornell-mappings*
 
-5. Configuration                                                *cornell-config*
+<C-l> in Cues
+    Focus Notes.
 
-Default values:
+<C-h> in Notes
+    Focus Cues.
 
-cues_width = 32
-summary_height = 8
-content_padding = 4
-qid_prefix = "Q"
+<CR> in Cues
+    Jump to the matching Note.
 
-==============================================================================
-vim:tw=78:ts=8:ft=help:norl:
+<CR> in Notes
+    Jump to the matching Cue.
+
+<leader>cv
+    Toggle Cornell View.
+
+<leader>cq
+    Add a question.
+
+<leader>cr
+    Toggle Review mode.
+
+<leader>cs
+    Toggle Summary.
+
+<C-s>
+    Save.
+
+q
+    Close Cornell View.
+
+===============================================================================
+4. CONFIGURATION                                                   *cornell-config*
+
+Example:
+
+    require("cornell").setup({
+      cues_width = 32,
+      summary_height = 8,
+      content_padding = 4,
+      qid_prefix = "Q",
+    })
+
+The navigation mappings <C-h> and <C-l> are deliberately buffer-local while
+Cornell View is active. Cursor synchronization does not change the current
+window, so navigation cannot be cancelled by CursorMoved autocmds.
